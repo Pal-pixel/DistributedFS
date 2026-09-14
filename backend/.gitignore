@@ -2,4 +2,4 @@ node_modules/
 .env
 uploads/
 logs/
-firebase-service-account.json
+distributedfs-backend-key.json

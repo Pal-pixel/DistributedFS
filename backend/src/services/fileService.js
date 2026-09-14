@@ -1,46 +1,90 @@
-const fs = require("fs");
-const path = require("path");
+const { db } = require("../config/firebase");
 
-const files = [];
+const filesCollection = db.collection("files");
 
-const uploadDirectory = path.join(process.cwd(), "uploads");
+/**
+ * Save file metadata to Firestore.
+ */
+const saveMetadata = async (metadata) => {
+    await filesCollection
+        .doc(metadata.fileId)
+        .set(metadata);
 
-const saveMetadata = (metadata) => {
-    files.push(metadata);
     return metadata;
 };
 
-const getAllFiles = () => {
+/**
+ * Get all file metadata.
+ */
+const getAllFiles = async () => {
+    const snapshot = await filesCollection.get();
+
+    const files = [];
+
+    snapshot.forEach((doc) => {
+        files.push(doc.data());
+    });
+
     return files;
 };
 
-const getFileById = (fileId) => {
-    return files.find(file => file.fileId === fileId);
-};
+/**
+ * Get a file by ID.
+ */
+const getFileById = async (fileId) => {
+    const doc = await filesCollection
+        .doc(fileId)
+        .get();
 
-const deleteFile = (fileId) => {
-    const index = files.findIndex(file => file.fileId === fileId);
-
-    if (index === -1) {
+    if (!doc.exists) {
         return null;
     }
 
-    const file = files[index];
+    return doc.data();
+};
 
-    const filePath = path.join(uploadDirectory, file.storageName);
+/**
+ * Delete only the Firestore metadata.
+ *
+ * Physical file deletion is handled
+ * by the storage node.
+ */
+const deleteFileMetadata = async (fileId) => {
+    const doc = await filesCollection
+        .doc(fileId)
+        .get();
 
-    if (fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath);
+    if (!doc.exists) {
+        return null;
     }
 
-    files.splice(index, 1);
+    const file = doc.data();
+
+    await filesCollection
+        .doc(fileId)
+        .delete();
 
     return file;
+};
+
+/**
+ * Update file metadata.
+ */
+const updateFileMetadata = async (
+    fileId,
+    updates
+) => {
+    await filesCollection
+        .doc(fileId)
+        .update(updates);
+
+    return getFileById(fileId);
 };
 
 module.exports = {
     saveMetadata,
     getAllFiles,
     getFileById,
-    deleteFile
+    updateFileMetadata,
+    deleteFileMetadata
 };
