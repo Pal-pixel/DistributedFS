@@ -9,11 +9,31 @@ const { db } = require("../config/firebase");
 
 const app = express();
 
+/*
+ * =========================================
+ * NODE CONFIGURATION
+ * =========================================
+ *
+ * Local:
+ *   NODE_ID=node-1
+ *   NODE_PORT=5001
+ *
+ * Docker:
+ *   NODE_ID=node-1
+ *   PORT=5001
+ *
+ * PORT is preferred for Docker/Render.
+ */
+
 const NODE_ID =
     process.env.NODE_ID || "node-1";
 
 const PORT =
-    Number(process.env.NODE_PORT || 5001);
+    Number(
+        process.env.PORT ||
+        process.env.NODE_PORT ||
+        5001
+    );
 
 const STORAGE_DIR =
     process.env.STORAGE_DIR ||
@@ -28,7 +48,7 @@ let activeRequests = 0;
 
 /*
  * =========================================
- * Basic middleware
+ * BASIC MIDDLEWARE
  * =========================================
  */
 
@@ -36,10 +56,14 @@ app.use(cors());
 
 app.use(express.json());
 
+app.use(express.urlencoded({
+    extended: true
+}));
+
 
 /*
  * =========================================
- * Active request tracking
+ * ACTIVE REQUEST TRACKING
  * =========================================
  */
 
@@ -66,7 +90,7 @@ app.use((req, res, next) => {
 
 /*
  * =========================================
- * Storage directory
+ * STORAGE DIRECTORY
  * =========================================
  */
 
@@ -80,7 +104,7 @@ fs.mkdirSync(
 
 /*
  * =========================================
- * Multer configuration
+ * MULTER CONFIGURATION
  * =========================================
  */
 
@@ -129,7 +153,7 @@ const upload =
 
 /*
  * =========================================
- * Root endpoint
+ * ROOT ENDPOINT
  * =========================================
  */
 
@@ -137,7 +161,7 @@ app.get(
     "/",
     (req, res) => {
 
-        res.json({
+        res.status(200).json({
 
             name:
                 "DistributedFS Storage Node",
@@ -160,7 +184,7 @@ app.get(
 
 /*
  * =========================================
- * Health endpoint
+ * HEALTH ENDPOINT
  * =========================================
  */
 
@@ -188,7 +212,7 @@ app.get(
 
 /*
  * =========================================
- * Storage information
+ * STORAGE INFORMATION
  * =========================================
  */
 
@@ -254,7 +278,10 @@ app.get(
                     false,
 
                 message:
-                    "Failed to read storage information"
+                    "Failed to read storage information",
+
+                error:
+                    error.message
             });
         }
     }
@@ -263,7 +290,7 @@ app.get(
 
 /*
  * =========================================
- * Storage statistics
+ * STORAGE STATISTICS
  * =========================================
  */
 
@@ -344,7 +371,10 @@ app.get(
                     false,
 
                 message:
-                    "Failed to get storage statistics"
+                    "Failed to get storage statistics",
+
+                error:
+                    error.message
             });
         }
     }
@@ -465,7 +495,10 @@ app.get(
                     false,
 
                 message:
-                    "Failed to calculate checksum"
+                    "Failed to calculate checksum",
+
+                error:
+                    error.message
             });
         }
     }
@@ -474,7 +507,7 @@ app.get(
 
 /*
  * =========================================
- * Upload file
+ * UPLOAD FILE
  * =========================================
  */
 
@@ -490,7 +523,7 @@ app.post(
      *
      * Primary uploads continue normally.
      *
-     * Enable with:
+     * Enable locally with:
      *
      * $env:FAIL_UPLOADS="true"
      */
@@ -587,7 +620,10 @@ app.post(
                     false,
 
                 message:
-                    "Storage upload failed"
+                    "Storage upload failed",
+
+                error:
+                    error.message
             });
         }
     }
@@ -596,7 +632,7 @@ app.post(
 
 /*
  * =========================================
- * Download file
+ * DOWNLOAD FILE
  * =========================================
  */
 
@@ -670,7 +706,10 @@ app.get(
                     false,
 
                 message:
-                    "Storage download failed"
+                    "Storage download failed",
+
+                error:
+                    error.message
             });
         }
     }
@@ -679,7 +718,7 @@ app.get(
 
 /*
  * =========================================
- * Delete file
+ * DELETE FILE
  * =========================================
  */
 
@@ -769,7 +808,10 @@ app.delete(
                     false,
 
                 message:
-                    "Storage delete failed"
+                    "Storage delete failed",
+
+                error:
+                    error.message
             });
         }
     }
@@ -778,7 +820,7 @@ app.delete(
 
 /*
  * =========================================
- * Register node in Firestore
+ * REGISTER NODE IN FIRESTORE
  * =========================================
  *
  * IMPORTANT:
@@ -792,10 +834,6 @@ app.delete(
  * and trigger automatic recovery.
  *
  * New nodes are created as ONLINE.
- *
- * Existing nodes keep their current
- * Firestore status until the coordinator's
- * health monitor updates it.
  */
 
 const registerNode =
@@ -897,12 +935,13 @@ const registerNode =
 
 /*
  * =========================================
- * Start storage node
+ * START STORAGE NODE
  * =========================================
  */
 
 app.listen(
     PORT,
+    "0.0.0.0",
     async () => {
 
         console.log(
