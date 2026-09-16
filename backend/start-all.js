@@ -67,7 +67,7 @@ startProcess(
     "Coordinator",
     "src/server.js",
     {
-        PORT: "5000",
+        PORT: process.env.PORT || "5000",
         SERVER_ID: "server-1"
     }
 );
