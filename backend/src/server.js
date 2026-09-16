@@ -20,10 +20,39 @@ const {
     repairFileReplication
 } = require("./services/replicationService");
 
+
+/*
+ * =========================================
+ * Load environment variables
+ * =========================================
+ */
+
 dotenv.config();
+
+
+/*
+ * =========================================
+ * Create Express application
+ * =========================================
+ */
 
 const app =
     express();
+
+
+/*
+ * =========================================
+ * Server configuration
+ * =========================================
+ *
+ * Render provides PORT automatically.
+ *
+ * Local development:
+ * PORT = 5000
+ *
+ * Render:
+ * PORT = assigned automatically
+ */
 
 const PORT =
     process.env.PORT || 5000;
@@ -32,9 +61,19 @@ const SERVER_ID =
     process.env.SERVER_ID || "server-1";
 
 
-app.use(cors());
+/*
+ * =========================================
+ * Middleware
+ * =========================================
+ */
 
-app.use(express.json());
+app.use(
+    cors()
+);
+
+app.use(
+    express.json()
+);
 
 app.use(
     express.urlencoded({
@@ -47,31 +86,49 @@ app.use(
  * =========================================
  * Root endpoint
  * =========================================
+ *
+ * GET /
+ *
+ * Used to verify that the coordinator
+ * is running.
  */
 
-app.get("/", (req, res) => {
+app.get(
+    "/",
+    (req, res) => {
 
-    res.json({
+        res.status(200).json({
 
-        name:
-            "DistributedFS",
+            name:
+                "DistributedFS",
 
-        version:
-            "1.0.0",
+            version:
+                "1.0.0",
 
-        status:
-            "running",
+            status:
+                "running",
 
-        serverId:
-            SERVER_ID
-    });
-});
+            serverId:
+                SERVER_ID
+
+        });
+
+    }
+);
 
 
 /*
  * =========================================
- * Coordinator health
+ * Coordinator health endpoint
  * =========================================
+ *
+ * GET /health
+ *
+ * Used by:
+ * - Render health checks
+ * - Monitoring
+ * - Frontend
+ * - Manual testing
  */
 
 app.get(
@@ -88,7 +145,9 @@ app.get(
 
             timestamp:
                 new Date().toISOString()
+
         });
+
     }
 );
 
@@ -98,18 +157,16 @@ app.get(
  * MANUAL REPLICATION REPAIR
  * =========================================
  *
- * Used for repairing a file whose replica
- * is missing or corrupted.
- *
- * Example:
- *
  * POST
  * /api/files/:fileId/repair-replication
  *
- * This uses the same replication service
- * used by the automatic health monitor.
+ * Repairs a file whose replica is:
+ * - missing
+ * - corrupted
+ * - invalid
  *
- * It does NOT manually modify Firestore.
+ * This uses the same replication service
+ * used by the automatic replication monitor.
  */
 
 app.post(
@@ -132,6 +189,10 @@ app.post(
                 );
 
 
+            /*
+             * File does not exist.
+             */
+
             if (!file) {
 
                 return res.status(404).json({
@@ -144,13 +205,15 @@ app.post(
 
                     fileId:
                         fileId
+
                 });
+
             }
 
 
             /*
-             * Only storage-node files can
-             * be repaired by this service.
+             * Only files stored on storage
+             * nodes can be repaired.
              */
 
             if (
@@ -168,9 +231,15 @@ app.post(
 
                     fileId:
                         fileId
+
                 });
+
             }
 
+
+            /*
+             * Log repair operation.
+             */
 
             console.log(
                 "================================="
@@ -193,22 +262,16 @@ app.post(
             );
 
             console.log(
+                `Replica: ${file.replicaNodeId || "None"}`
+            );
+
+            console.log(
                 "================================="
             );
 
 
             /*
-             * Use the existing replication
-             * repair logic.
-             *
-             * For demo2.pdf:
-             *
-             * Primary = node-2
-             * Replica = missing
-             *
-             * The service will verify the
-             * primary checksum and recreate
-             * the missing replica.
+             * Run replication repair.
              */
 
             const result =
@@ -218,8 +281,7 @@ app.post(
 
 
             /*
-             * Get updated metadata after
-             * repair.
+             * Fetch updated metadata.
              */
 
             const updatedFile =
@@ -227,6 +289,10 @@ app.post(
                     fileId
                 );
 
+
+            /*
+             * Return repair result.
+             */
 
             res.status(200).json({
 
@@ -246,6 +312,7 @@ app.post(
 
                 file:
                     updatedFile
+
             });
 
 
@@ -267,8 +334,11 @@ app.post(
 
                 error:
                     error.message
+
             });
+
         }
+
     }
 );
 
@@ -277,6 +347,21 @@ app.post(
  * =========================================
  * File routes
  * =========================================
+ *
+ * GET
+ * /api/files
+ *
+ * POST
+ * /api/files/upload
+ *
+ * GET
+ * /api/files/:id
+ *
+ * GET
+ * /api/files/:id/download
+ *
+ * DELETE
+ * /api/files/:id
  */
 
 app.use(
@@ -289,6 +374,18 @@ app.use(
  * =========================================
  * Storage-node management routes
  * =========================================
+ *
+ * GET
+ * /api/nodes
+ *
+ * GET
+ * /api/nodes/healthy
+ *
+ * GET
+ * /api/nodes/status
+ *
+ * POST
+ * /api/nodes/repair
  */
 
 app.use(
@@ -301,10 +398,23 @@ app.use(
  * =========================================
  * Start coordinator
  * =========================================
+ *
+ * IMPORTANT FOR RENDER:
+ *
+ * The server must listen on:
+ *
+ *     0.0.0.0
+ *
+ * and use:
+ *
+ *     process.env.PORT
+ *
+ * instead of hardcoding a port.
  */
 
 app.listen(
     PORT,
+    "0.0.0.0",
     () => {
 
         console.log(
@@ -328,7 +438,11 @@ app.listen(
         );
 
         console.log(
-            `Environment: ${process.env.NODE_ENV}`
+            `Environment: ${process.env.NODE_ENV || "development"}`
+        );
+
+        console.log(
+            "Host       : 0.0.0.0"
         );
 
         console.log(
@@ -336,8 +450,16 @@ app.listen(
         );
 
 
+        /*
+         * Start automatic replication
+         * monitoring.
+         *
+         * Runs every 30 seconds.
+         */
+
         startReplicationMonitor(
             30000
         );
+
     }
 );
