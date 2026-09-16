@@ -1,0 +1,64 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #09090b;
+  --foreground: #f4f4f5;
+  --muted: #a1a1aa;
+  --border: #27272a;
+  --sidebar: #121215;
+}
+
+body {
+  color: var(--foreground);
+  background: var(--background);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-size: 13px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Dark Technical Grid Background (32px) */
+.bg-tech-grid {
+  background-image: 
+    linear-gradient(to right, rgba(39, 39, 42, 0.6) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(39, 39, 42, 0.6) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+/* Pulse animation for active node indicator */
+@keyframes nodePulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.4;
+    transform: scale(1.15);
+  }
+}
+
+.animate-node-pulse {
+  animation: nodePulse 2.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Compact Dark Scrollbars */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #27272a;
+  border-radius: 2px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #3f3f46;
+}
